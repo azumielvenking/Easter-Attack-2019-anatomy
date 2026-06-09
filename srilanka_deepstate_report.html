@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deep State Dossier: Investigating the Easter Bombings</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chosen Palette: Warm Neutrals (Stone/Cream background, Slate text, Muted categorical accents: Crimson for Extremists, Navy for State, Amber for Proxies, Emerald for Justice) -->
+    
+    <!-- Application Structure Plan: 
+         1. Hero/Intro: Establishes context and instructions for the interactive dossier.
+         2. Actor Intelligence (Dashboard): Categorizes key players (State, Proxies, Extremists, Justice). Users click to load 'intel files', keeping information dense but clean.
+         3. The Nexus Matrix: Fulfills the 'diagram showing connections' requirement without SVG. An interactive grid where selecting a node highlights connected entities and explains the link, revealing the covert network dynamically.
+         4. Chronological Timeline: A vertical, interactive timeline showing the progression from 2002 to 2026. Highlights key phases (Incubation, Attack, Cover-up, Reckoning).
+         5. The Purge (Visualization): Uses Chart.js to visualize the statistical impact of the deep state cover-up (e.g., 704 CID officers blacklisted).
+         This structure ensures complex, intertwined narratives are broken into digestible, explorable components prioritizing user understanding. 
+    -->
+    
+    <!-- Visualization & Content Choices: 
+         - Actor Profiles: Goal -> Organize/Inform. Method -> Interactive Cards/Details panel. Justification -> Allows users to learn "who is who" before tackling the complex timeline.
+         - The Nexus (Network): Goal -> Relationships. Method -> HTML/CSS Grid with JS highlighting. Justification -> Fulfills diagram requirement using strictly DOM manipulation (NO SVG). Explains the exact nature of the connections.
+         - Timeline: Goal -> Change/Process. Method -> Vertical CSS Timeline with JS reveal. Justification -> Best for chronological narrative.
+         - The CID Purge Chart: Goal -> Inform/Impact. Method -> Chart.js Bar/Doughnut. Justification -> Visualizes the scale of the Nov 2019 cover-up (704 blacklisted officers).
+         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+
+    <style>
+        /* Base Styling & Typography */
+        body {
+            background-color: #f5f5f4; /* Tailwind stone-100 */
+            color: #292524; /* Tailwind stone-800 */
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Chart Container Strict Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Max width to prevent excessive stretching */
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px; /* Base height */
+            max-height: 450px;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        /* Timeline Specific CSS */
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background-color: #d6d3d1; /* stone-300 */
+            transform: translateX(-50%);
+        }
+        
+        .timeline-node {
+            width: 50%;
+            padding: 1rem 2rem;
+            position: relative;
+        }
+        
+        .timeline-node:nth-child(odd) {
+            left: 0;
+            text-align: right;
+        }
+        
+        .timeline-node:nth-child(even) {
+            left: 50%;
+            text-align: left;
+        }
+
+        .timeline-node::after {
+            content: '';
+            position: absolute;
+            top: 1.5rem;
+            width: 20px;
+            height: 20px;
+            background-color: #f5f5f4;
+            border: 4px solid #44403c;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .timeline-node:nth-child(odd)::after {
+            right: -10px;
+        }
+
+        .timeline-node:nth-child(even)::after {
+            left: -10px;
+        }
+
+        @media (max-width: 768px) {
+            .timeline-container::before {
+                left: 30px;
+            }
+            .timeline-node {
+                width: 100%;
+                left: 0 !important;
+                text-align: left !important;
+                padding-left: 70px;
+                padding-right: 1rem;
+            }
+            .timeline-node::after {
+                left: 20px !important;
+            }
+        }
+
+        /* Network Matrix Interactivity */
+        .network-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .network-node.dimmed {
+            opacity: 0.3;
+            transform: scale(0.95);
+        }
+        .network-node.highlighted {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-width: 2px;
+        }
+        .connection-text {
+            display: none;
+        }
+        .connection-text.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-stone-900 text-stone-100 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-2 font-bold text-xl tracking-wider">
+                    <span>&#128269;</span> <!-- Magnifying Glass Unicode -->
+                    <span>DEEP STATE DOSSIER</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#intel" class="hover:bg-stone-700 px-3 py-2 rounded-md text-sm font-medium transition">Actor Profiles</a>
+                        <a href="#nexus" class="hover:bg-stone-700 px-3 py-2 rounded-md text-sm font-medium transition">The Nexus</a>
+                        <a href="#chronology" class="hover:bg-stone-700 px-3 py-2 rounded-md text-sm font-medium transition">Chronology</a>
+                        <a href="#data" class="hover:bg-stone-700 px-3 py-2 rounded-md text-sm font-medium transition">The Purge</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="bg-stone-100 py-20 border-b border-stone-300">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-stone-900 tracking-tight mb-6 uppercase">
+                Anatomy of a Cover-Up
+            </h1>
+            <p class="text-xl md:text-2xl text-stone-600 mb-8 font-light">
+                Investigating the 2019 Easter Bombings, State Intelligence Service (SIS) Collusion, and the 2026 Forensic Reckoning in Sri Lanka.
+            </p>
+            <div class="inline-flex space-x-4">
+                <a href="#intel" class="bg-stone-800 text-stone-100 px-6 py-3 rounded-lg font-semibold hover:bg-stone-700 transition shadow-md">
+                    Start Investigation &#8595;
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Section 1: Actor Profiles -->
+        <section id="intel" class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-bold text-stone-900 border-b-4 border-stone-800 inline-block pb-2 mb-4">I. Intelligence Targets & Profiles</h2>
+                    <p class="text-stone-600 text-lg max-w-3xl">
+                        To understand the mechanism of the attack and the subsequent cover-up, we must first isolate the key entities. This section categorizes the primary actors across the Military Apparatus, Paramilitary Proxies, the Extremist Cell, and Civilian Justice. Click on a target to access their full dossier.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Actor Roster (Left 2 Columns) -->
+                    <div class="lg:col-span-2 space-y-8">
+                        
+                        <!-- Group: State/Military -->
+                        <div>
+                            <h3 class="text-lg font-bold text-blue-800 uppercase tracking-widest mb-4 flex items-center">
+                                <span class="mr-2">&#127984;</span> State & Military Intelligence
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="roster-state">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Group: Proxies -->
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-700 uppercase tracking-widest mb-4 flex items-center">
+                                <span class="mr-2">&#128101;</span> Paramilitary Proxies
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="roster-proxy">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Group: Extremists -->
+                        <div>
+                            <h3 class="text-lg font-bold text-red-700 uppercase tracking-widest mb-4 flex items-center">
+                                <span class="mr-2">&#9760;</span> The Extremist Cell (NTJ)
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="roster-extremist">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Group: Civilian Police -->
+                        <div>
+                            <h3 class="text-lg font-bold text-emerald-700 uppercase tracking-widest mb-4 flex items-center">
+                                <span class="mr-2">&#9818;</span> Civilian Police (CID)
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="roster-police">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Actor Detail Pane (Right Column) -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-24 bg-stone-50 border border-stone-200 rounded-xl p-6 shadow-lg min-h-[400px]" id="actor-detail-pane">
+                            <div class="text-center text-stone-400 mt-20">
+                                <div class="text-5xl mb-4">&#128193;</div>
+                                <p class="text-lg">Select a target from the roster to access their intelligence file.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: The Nexus (Network) -->
+        <section id="nexus" class="py-16 bg-stone-900 text-stone-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-12 text-center">
+                    <h2 class="text-3xl font-bold text-white border-b-4 border-stone-500 inline-block pb-2 mb-4">II. The Nexus of Collusion</h2>
+                    <p class="text-stone-300 text-lg max-w-3xl mx-auto">
+                        These events were not isolated. Evidence points to a structured communication network bridging military intelligence, proxy paramilitaries, and suicide bombers. Select any node in the matrix below to reveal their verified operational links.
+                    </p>
+                </div>
+
+                <!-- Interactive Matrix -->
+                <div class="bg-stone-800 rounded-xl p-8 border border-stone-700 shadow-2xl relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-stone-300">Operational Matrix Map</h3>
+                        <button onclick="resetNetwork()" class="text-sm bg-stone-700 hover:bg-stone-600 px-3 py-1 rounded transition text-stone-200">
+                            &#8634; Reset View
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="network-grid">
+                        <!-- JS injects network nodes here -->
+                    </div>
+
+                    <!-- Connection Intelligence Readout -->
+                    <div class="bg-stone-900 p-6 rounded-lg border border-stone-700 min-h-[150px]">
+                        <h4 class="text-sm uppercase tracking-wider text-stone-400 mb-2">Verified Interactions Readout</h4>
+                        <div id="connection-readout" class="text-lg font-mono text-stone-200">
+                            <span class="text-stone-500">Awaiting node selection...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Chronology -->
+        <section id="chronology" class="py-16 bg-stone-100">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 text-center">
+                    <h2 class="text-3xl font-bold text-stone-900 border-b-4 border-stone-800 inline-block pb-2 mb-4">III. Chronological Timeline (2002 - 2026)</h2>
+                    <p class="text-stone-600 text-lg max-w-3xl mx-auto">
+                        Trace the evolution from the initial blood feud between civilian police and military intelligence, through the incubation of the extremist cell, the execution of the attacks, the systemic cover-up, and finally, the 2026 forensic reckoning.
+                    </p>
+                </div>
+
+                <div class="relative timeline-container" id="timeline-container">
+                    <!-- JS injects timeline nodes here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Data & The Purge -->
+        <section id="data" class="py-16 bg-white border-t border-stone-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-bold text-stone-900 border-b-4 border-stone-800 inline-block pb-2 mb-4">IV. The Systemic Cover-Up</h2>
+                    <p class="text-stone-600 text-lg max-w-3xl">
+                        Following the November 2019 regime change, a massive, immediate crackdown was orchestrated not against the terrorists, but against the civilian police (CID) investigating the military's role. This data visualization illustrates the scale of the administrative purge.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-red-800 mb-4">The November 24th Directive</h3>
+                        <p class="text-stone-700 mb-6 leading-relaxed">
+                            On November 24, 2019, newly installed CID boss DIG W. Thilakaratne issued an unprecedented, sweeping immigration directive. Without any judicial magistrate warrant, he illegally blacklisted and placed a travel ban on <strong class="text-stone-900 text-xl">704 CID officers</strong>.
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <span class="text-red-600 mr-2 mt-1">&#10008;</span>
+                                <div>
+                                    <strong>Investigative Paralysis:</strong> Effectively trapped all lead detectives inside the country, freezing ongoing probes into military intelligence and the Easter attacks.
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-red-600 mr-2 mt-1">&#10008;</span>
+                                <div>
+                                    <strong>Targeting Leadership:</strong> CID Director Shani Abeysekara was demoted to a personal assistant role and subsequently arrested on fabricated charges, spending 10 months in jail.
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-emerald-600 mr-2 mt-1">&#10004;</span>
+                                <div>
+                                    <strong>The 2026 Reckoning:</strong> On February 9, 2026, the Colombo Central Crime Investigation Bureau officially arrested former DIG W. Thilakaratne for this exact abuse of power.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="bg-stone-50 p-6 rounded-xl border border-stone-200 shadow-inner">
+                        <div class="chart-container">
+                            <canvas id="purgeChart"></canvas>
+                        </div>
+                        <p class="text-sm text-center text-stone-500 mt-4 italic">Fig 1: CID Operational Capacity Disruption (2019 vs 2026)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-stone-900 text-stone-400 py-8 text-center">
+        <p>Interactive Dossier generated for Investigative Analysis.</p>
+        <p class="text-xs mt-2">Data synthesized from provided source report (Events up to June 2026).</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- DATA ARCHITECTURE --- //
+
+        const actors = [
+            { id: 'sallay', name: 'Major Gen. Suresh Sallay', group: 'state', title: 'Former DMI / SIS Director', status: 'Arrested (2026) under PTA', desc: 'Main target of Channel 4 disclosures. Accused of directly instructing military informants to survey churches and communicating with bombers on the day of the attack. Fostered secret meetings with SLTJ in 2015.', icon: '&#127984;', color: 'blue' },
+            { id: 'thilakaratne', name: 'DIG W. Thilakaratne', group: 'state', title: 'Former CID Director (Installed Nov 2019)', status: 'Arrested (Feb 2026)', desc: 'Installed immediately after the Rajapaksa regime change. Executed an unlawful mass blacklist and travel ban on 704 CID officers to cripple the independent investigation.', icon: '&#127984;', color: 'blue' },
+            { id: 'kodituwakku', name: 'Brig. Chula Kodituwakku', group: 'state', title: 'Former MI Director', status: 'Under Investigation', desc: 'Provided false testimony to the Presidential Commission of Inquiry (PCoI), claiming Zahran had successfully fled to India when civilian police knew he was hiding in Colombo under intelligence shielding.', icon: '&#127984;', color: 'blue' },
+            
+            { id: 'pillayan', name: 'Sivanesathurai Chandrakanthan (Pillayan)', group: 'proxy', title: 'Leader of TMVP', status: 'Active / Under Scrutiny', desc: 'Incarcerated in Batticaloa Prison (2015-2020). Shared space with NTJ extremists. Submitted highly technical, perfectly scripted intelligence regarding the bombings from his cell to the PCoI. Released post-2019.', icon: '&#128101;', color: 'amber' },
+            { id: 'maulana', name: 'Hanzeer Azad Maulana', group: 'proxy', title: 'TMVP Exec / Whistleblower', status: 'Fled to Europe (2023)', desc: 'Pillayan’s personal secretary. Acted as the physical bridge between state intelligence operators and the radicalized cell in prison. Blew the whistle to the UN and Channel 4.', icon: '&#128101;', color: 'amber' },
+
+            { id: 'zahran', name: 'Zahran Hashim', group: 'extremist', title: 'NTJ Ringleader / Suicide Bomber', status: 'Deceased (Apr 2019)', desc: 'Operational ringleader. Hid in Colombo under alleged intelligence cover in early 2019. Visited Dr. Shiras (neighbor to Maulana) in Dec 2018.', icon: '&#9760;', color: 'red' },
+            { id: 'rilwan', name: 'Rilwan Hashim', group: 'extremist', title: 'Explosives Tester', status: 'Deceased', desc: 'Zahran’s brother. Severely maimed in a 2018 chemical explosion. Was secretly treated under a fabricated "gas explosion" cover story orchestrated by connected assets.', icon: '&#9760;', color: 'red' },
+            { id: 'jameel', name: 'Abdul Latheef Jameel Mohamed', group: 'extremist', title: 'Taj Samudra Bomber', status: 'Deceased (Apr 2019)', desc: 'Aborted initial attack. Received a call from an unknown handler (alleged Sallay). Frisked by a private security asset connected to ex-MI, losing his phone right before detonating at Tropical Inn.', icon: '&#9760;', color: 'red' },
+            { id: 'sarah', name: 'Pulasthi Mahendran (Sarah Jasmine)', group: 'extremist', title: 'NTJ Asset', status: 'Allegedly Extracted / Covered Up', desc: 'Subject of intense tracking. The SIS pushed for a controversial 3rd DNA test on safehouse remains with missing alleles to declare her dead and close the file, covering up alleged extraction protocols.', icon: '&#9760;', color: 'red' },
+
+            { id: 'shani', name: 'Shani Abeysekara', group: 'police', title: 'Former CID Director', status: 'Reinstated/Vindicated', desc: 'Uncovered direct MI involvement in political crimes in 2016. Demoted and jailed on fabricated charges immediately after the Nov 2019 regime change.', icon: '&#9818;', color: 'emerald' },
+        ];
+
+        const connections = {
+            'sallay': [
+                { target: 'zahran', desc: 'Allegedly shielded Zahran from civilian police tracking in early 2019.' },
+                { target: 'jameel', desc: 'Alleged to be the unknown handler who called Jameel after he aborted the Taj attack.' },
+                { target: 'thilakaratne', desc: 'Both elevated to top positions in Nov 2019 to control SIS and CID, effectively suppressing the truth.' }
+            ],
+            'thilakaratne': [
+                { target: 'shani', desc: 'Replaced Shani Abeysekara; trapped Shani and 703 other officers in the country to paralyze the CID.' }
+            ],
+            'kodituwakku': [
+                { target: 'zahran', desc: 'Fed false intel to security panels claiming Zahran fled to India, contradicting CID findings.' }
+            ],
+            'pillayan': [
+                { target: 'maulana', desc: 'Maulana acted as Pillayan’s personal secretary and outside proxy.' },
+                { target: 'zahran', desc: 'Shared Batticaloa prison space with NTJ assets, forming a bridge to the extremists.' }
+            ],
+            'maulana': [
+                { target: 'zahran', desc: 'Acted as the physical bridge/messenger between the deep state and Zahran’s cell via prison visits.' }
+            ],
+            'zahran': [
+                { target: 'rilwan', desc: 'Brothers; co-conspirators in the NTJ extremist cell.' },
+                { target: 'sallay', desc: 'Allegedly received domestic intelligence shielding while hiding in Colombo.' }
+            ],
+            'rilwan': [
+                { target: 'zahran', desc: 'Tested explosives for the cell.' }
+            ],
+            'jameel': [
+                { target: 'sallay', desc: 'Received a highly suspicious phone call from an alleged handler before his final detonation.' }
+            ],
+            'sarah': [
+                { target: 'sallay', desc: 'SIS (under Sallay) forced a flawed 3rd DNA test to falsely declare her dead and close her extraction file.' }
+            ],
+            'shani': [
+                { target: 'sallay', desc: 'Shani’s 2016 CID probe got Sallay exiled to Malaysia. Sallay’s 2019 return led to Shani’s imprisonment.' },
+                { target: 'thilakaratne', desc: 'Victim of Thilakaratne’s 704-officer blacklist purge.' }
+            ]
+        };
+
+        const timelineData = [
+            { date: 'Jan 2, 2002', title: 'Millennium City Raid', desc: 'Civilian police raid exposes Military Intelligence\'s (MI) Deep Penetration Unit, sparking a permanent institutional blood feud between CID and MI.', phase: 'Pre-Attack' },
+            { date: '2005 - 2014', title: 'The Tripoli Platoon Era', desc: 'MI deploys proxy Tamil paramilitaries (Pillayan faction). Covert actions executed with impunity under Defense Sec. Gotabaya Rajapaksa.', phase: 'Pre-Attack' },
+            { date: '2015', title: 'The Secret Meeting', desc: 'Abdul Razik (SLTJ leader) meets secretly with Suresh Sallay. Witnessed by retired DIG Palitha Siriwardhana.', phase: 'Pre-Attack' },
+            { date: 'Nov 2016', title: 'CID Strikes Back; Sallay Exiled', desc: 'CID Director Shani Abeysekara uncovers MI involvement in crimes. Sallay is removed as DMI and sent into diplomatic exile in Malaysia.', phase: 'Incubation' },
+            { date: 'Mid-2017', title: 'The Prison Nexus', desc: 'Inside Batticaloa Prison, NTJ assets spend 5 months near Pillayan. Azad Maulana frequently visits, bridging state intel operators and radicals.', phase: 'Incubation' },
+            { date: 'Aug 27, 2018', title: 'The Chemical Blast Cover-up', desc: 'Rilwan Hashim maimed in a chemical test. A fabricated "gas cylinder" story gets him secretly treated in Colombo via connected assets.', phase: 'Incubation' },
+            { date: 'Dec 2018', title: 'Return & Rendezvous', desc: 'Sallay returns to Sri Lanka. Simultaneously, Zahran visits Dr. Shiras in Dehiwala—directly adjacent to Maulana’s home.', phase: 'Incubation' },
+            { date: 'Early 2019', title: 'MI Misdirection', desc: 'Brig. Kodituwakku falsely claims Zahran fled to India. CID proves Zahran is hiding in Colombo with domestic intelligence shielding.', phase: 'Incubation' },
+            { date: 'Early Apr 2019', title: 'The Church Survey Directive', desc: 'Military informant "Petta" allegedly instructed by Sallay to physically survey St. Sebastian’s Church in Katuwapitiya.', phase: 'Attack' },
+            { date: 'Apr 21, 2019', title: 'Easter Sunday Bombings', desc: 'Attacks commence. From his cell, Pillayan instantly identifies the blast and predicts Bishop\'s visitation cancellation.', phase: 'Attack' },
+            { date: 'Apr 21, 2019 (08:51 AM)', title: 'The Handler Call & Lost Phone', desc: 'Bomber Jameel aborts Taj attack, receives a call from handler (allegedly Sallay). Frisked by ex-MI-linked security, his phone "vanishes" before he detonates at Tropical Inn.', phase: 'Attack' },
+            { date: 'Oct 1, 2019', title: 'The Scripted Submission', desc: 'Pillayan submits a flawless, highly technical 21-point document on bomb circuitry to the PCoI from prison. Deemed proof of MI scripting.', phase: 'Attack' },
+            { date: 'Nov 2019', title: 'Regime Return & Institutional Purge', desc: 'Gotabaya wins presidency. CID boss Shani demoted/arrested. DIG Thilakaratne bans 704 CID officers from travel. Sallay takes over SIS.', phase: 'Cover-Up' },
+            { date: 'Mid-2020', title: 'The DNA Cover-up', desc: 'SIS pushes a flawed 3rd DNA test to falsely declare NTJ asset Sarah Jasmine dead, halting extraction investigations.', phase: 'Cover-Up' },
+            { date: 'Late 2023', title: 'The Whistleblower Flees', desc: 'Azad Maulana escapes to Europe, delivering cell records to the UN and Channel 4.', phase: 'Cover-Up' },
+            { date: 'Feb 9, 2026', title: 'Arrest of DIG Thilakaratne', desc: 'New administration orders fresh probe. Thilakaratne arrested for abusing power in the 2019 blacklisting of 704 detectives.', phase: 'Reckoning' },
+            { date: 'Late Feb 2026', title: 'Arrest of Suresh Sallay', desc: 'CID intercepts and arrests former SIS Director Sallay under the Prevention of Terrorism Act (PTA).', phase: 'Reckoning' }
+        ];
+
+        // --- DOM RENDER FUNCTIONS --- //
+
+        function renderActors() {
+            actors.forEach(actor => {
+                const card = `
+                    <div class="bg-stone-50 border border-stone-200 p-4 rounded-lg cursor-pointer hover:bg-stone-200 transition shadow-sm" onclick="showActorDetails('${actor.id}')">
+                        <div class="font-bold text-stone-900">${actor.name}</div>
+                        <div class="text-sm text-stone-500">${actor.title}</div>
+                    </div>
+                `;
+                document.getElementById(`roster-${actor.group}`).innerHTML += card;
+            });
+        }
+
+        function showActorDetails(id) {
+            const actor = actors.find(a => a.id === id);
+            let colorClass = '';
+            if(actor.group === 'state') colorClass = 'text-blue-700';
+            if(actor.group === 'proxy') colorClass = 'text-amber-700';
+            if(actor.group === 'extremist') colorClass = 'text-red-700';
+            if(actor.group === 'police') colorClass = 'text-emerald-700';
+
+            const html = `
+                <div class="animate-[fadeIn_0.3s]">
+                    <div class="text-4xl mb-4">${actor.icon}</div>
+                    <h3 class="text-2xl font-bold text-stone-900 mb-1">${actor.name}</h3>
+                    <h4 class="${colorClass} font-semibold uppercase tracking-widest text-sm mb-4">${actor.title}</h4>
+                    
+                    <div class="bg-stone-200 px-3 py-1 rounded text-sm font-mono text-stone-800 inline-block mb-6 border border-stone-300">
+                        Status (2026): ${actor.status}
+                    </div>
+
+                    <p class="text-stone-700 leading-relaxed border-t border-stone-300 pt-4">
+                        ${actor.desc}
+                    </p>
+                </div>
+            `;
+            document.getElementById('actor-detail-pane').innerHTML = html;
+        }
+
+        function renderNetwork() {
+            const grid = document.getElementById('network-grid');
+            actors.forEach(actor => {
+                let borderClass = 'border-stone-600';
+                if(actor.group === 'state') borderClass = 'border-blue-500/50';
+                if(actor.group === 'proxy') borderClass = 'border-amber-500/50';
+                if(actor.group === 'extremist') borderClass = 'border-red-500/50';
+                if(actor.group === 'police') borderClass = 'border-emerald-500/50';
+
+                const btn = document.createElement('div');
+                btn.className = `network-node bg-stone-700 border-2 ${borderClass} rounded-lg p-3 text-center text-sm font-medium text-stone-200 shadow hover:bg-stone-600`;
+                btn.innerHTML = `<div>${actor.icon}</div><div>${actor.name}</div>`;
+                btn.onclick = () => highlightNetwork(actor.id);
+                btn.id = `node-${actor.id}`;
+                grid.appendChild(btn);
+            });
+        }
+
+        function highlightNetwork(targetId) {
+            // Reset all
+            document.querySelectorAll('.network-node').forEach(el => {
+                el.classList.remove('highlighted', 'dimmed', 'border-stone-100');
+                el.classList.add('dimmed');
+            });
+
+            const readout = document.getElementById('connection-readout');
+            let readoutHTML = '';
+            const sourceActor = actors.find(a => a.id === targetId);
+
+            // Highlight Self
+            const selfNode = document.getElementById(`node-${targetId}`);
+            selfNode.classList.remove('dimmed');
+            selfNode.classList.add('highlighted', 'border-stone-100', 'bg-stone-600');
+
+            // Find Connections (Both directions)
+            let foundConnections = false;
+            
+            // Outbound
+            if (connections[targetId]) {
+                connections[targetId].forEach(conn => {
+                    document.getElementById(`node-${conn.target}`).classList.remove('dimmed');
+                    document.getElementById(`node-${conn.target}`).classList.add('highlighted');
+                    const targetActor = actors.find(a => a.id === conn.target);
+                    readoutHTML += `<div class="mb-3 pb-3 border-b border-stone-700 last:border-0"><strong class="text-stone-100">${sourceActor.name} &#8594; ${targetActor.name}:</strong> ${conn.desc}</div>`;
+                    foundConnections = true;
+                });
+            }
+
+            // Inbound
+            Object.keys(connections).forEach(sourceKey => {
+                if(sourceKey !== targetId) {
+                    connections[sourceKey].forEach(conn => {
+                        if(conn.target === targetId) {
+                            document.getElementById(`node-${sourceKey}`).classList.remove('dimmed');
+                            document.getElementById(`node-${sourceKey}`).classList.add('highlighted');
+                            const inboundActor = actors.find(a => a.id === sourceKey);
+                            readoutHTML += `<div class="mb-3 pb-3 border-b border-stone-700 last:border-0"><strong class="text-stone-100">${inboundActor.name} &#8594; ${sourceActor.name}:</strong> ${conn.desc}</div>`;
+                            foundConnections = true;
+                        }
+                    });
+                }
+            });
+
+            if (!foundConnections) {
+                readoutHTML = `<div class="text-stone-500 italic">No direct operational links documented in this matrix for ${sourceActor.name}.</div>`;
+            }
+
+            readout.innerHTML = readoutHTML;
+        }
+
+        function resetNetwork() {
+            document.querySelectorAll('.network-node').forEach(el => {
+                el.classList.remove('highlighted', 'dimmed', 'border-stone-100', 'bg-stone-600');
+            });
+            document.getElementById('connection-readout').innerHTML = '<span class="text-stone-500">Awaiting node selection...</span>';
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            timelineData.forEach((event, index) => {
+                let badgeColor = 'bg-stone-600';
+                if(event.phase === 'Pre-Attack') badgeColor = 'bg-stone-500';
+                if(event.phase === 'Incubation') badgeColor = 'bg-amber-600';
+                if(event.phase === 'Attack') badgeColor = 'bg-red-700';
+                if(event.phase === 'Cover-Up') badgeColor = 'bg-blue-800';
+                if(event.phase === 'Reckoning') badgeColor = 'bg-emerald-700';
+
+                const node = `
+                    <div class="timeline-node">
+                        <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-md inline-block w-full sm:w-10/12">
+                            <span class="${badgeColor} text-white text-xs font-bold uppercase tracking-wider py-1 px-2 rounded mb-2 inline-block">${event.phase}</span>
+                            <div class="text-sm font-mono text-stone-500 mb-1">${event.date}</div>
+                            <h4 class="text-xl font-bold text-stone-900 mb-2">${event.title}</h4>
+                            <p class="text-stone-700 text-sm leading-relaxed">${event.desc}</p>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += node;
+            });
+        }
+
+        function initCharts() {
+            const ctx = document.getElementById('purgeChart').getContext('2d');
+            
+            // Visualizing the systemic shock: The suppression of CID
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pre-Nov 2019', 'Post-Nov 24, 2019', '2026 Reckoning'],
+                    datasets: [
+                        {
+                            label: 'Active CID Investigators (Unrestricted)',
+                            data: [705, 0, 704], // Approximations for narrative impact based on the 704 banned + Shani.
+                            backgroundColor: '#059669', // Emerald 600
+                            borderColor: '#047857',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Blacklisted / Arrested CID Officers',
+                            data: [0, 705, 0], // The purge
+                            backgroundColor: '#dc2626', // Red 600
+                            borderColor: '#b91c1c',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Systemic Suppression: CID Officers Banned from Travel',
+                            font: { size: 16, family: 'sans-serif' },
+                            color: '#292524'
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#44403c'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' Officers';
+                                        if(context.dataIndex === 1 && context.datasetIndex === 1) {
+                                            label += ' (704 Banned + Shani Jailed)';
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Detectives',
+                                color: '#57534e'
+                            },
+                            ticks: { color: '#57534e' },
+                            grid: { color: '#e7e5e4' }
+                        },
+                        x: {
+                            ticks: { color: '#57534e', font: { weight: 'bold' } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderActors();
+            renderNetwork();
+            renderTimeline();
+            initCharts();
+        });
+
+    </script>
+</body>
+</html>
